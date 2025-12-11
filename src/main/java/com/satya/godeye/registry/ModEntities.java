@@ -23,7 +23,7 @@ public class ModEntities {
             Registries.ENTITY_TYPE,
             THE_EYE_KEY,
             EntityType.Builder.create(TheEyeEntity::new, SpawnGroup.CREATURE)
-                    .dimensions(1.0f, 1.0f)
+                    .dimensions(3.0f, 1.75f)
                     .build(THE_EYE_KEY) // Must pass the key here in 1.21.2+
     );
 

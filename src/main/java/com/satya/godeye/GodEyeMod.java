@@ -3,7 +3,9 @@ package com.satya.godeye;
 import com.satya.godeye.entity.custom.TheEyeEntity;
 import com.satya.godeye.registry.ModEntities;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry; // <--- MAKE SURE THIS IMPORT IS HERE
+import net.minecraft.server.network.ServerPlayerEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.satya.godeye.command.ModCommands;
@@ -32,5 +34,20 @@ public class GodEyeMod implements ModInitializer {
 
         System.out.println("!!!Registering Mod commands");
         ModCommands.register();
+
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
+            // We only care if a PLAYER died
+            if (entity instanceof ServerPlayerEntity victim) {
+                // Find all God Eyes in the world and notify them
+                // Note: In a real mod, you might want to optimize this search
+                entity.getWorld().getEntitiesByClass(TheEyeEntity.class,
+                        entity.getBoundingBox().expand(200), // Check within 200 blocks? Or Global?
+                        eye -> true
+                ).forEach(eye -> {
+                    // Pass the victim and the killer (source.getAttacker())
+                    eye.onPlayerKilled(victim, damageSource.getAttacker());
+                });
+            }
+        });
     }
 }
