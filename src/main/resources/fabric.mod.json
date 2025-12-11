@@ -12,7 +12,7 @@
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/thegodeye/icon.png",
+	"icon": "assets/godeye/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
