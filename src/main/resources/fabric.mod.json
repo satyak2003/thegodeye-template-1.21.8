@@ -1,0 +1,44 @@
+{
+	"schemaVersion": 1,
+	"id": "godeye",
+	"version": "${version}",
+	"name": "TheGodEye",
+	"description": "The RIFT",
+	"authors": [
+		"Carlo23"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/thegodeye/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.satya.godeye.GodEyeMod"
+		],
+		"client": [
+			"com.satya.godeye.client.GodEyeClient"
+		],
+		"fabric-datagen": [
+			"com.satya.TheGodEyeDataGenerator"
+		]
+	},
+	"mixins": [
+		"thegodeye.mixins.json",
+		{
+			"config": "thegodeye.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.2",
+		"minecraft": "~1.21.8",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
