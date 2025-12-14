@@ -5,6 +5,7 @@ import net.minecraft.util.Identifier;
 import software.bernie.geckolib.model.GeoModel;
 // CORRECT IMPORT
 import software.bernie.geckolib.renderer.base.GeoRenderState;
+import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 public class TheEyeModel extends GeoModel<TheEyeEntity> {
 
@@ -19,6 +20,8 @@ public class TheEyeModel extends GeoModel<TheEyeEntity> {
     public Identifier getTextureResource(GeoRenderState state) {
         return Identifier.of("godeye", "textures/entity/rift_eye.png");
     }
+
+
 
     // 3. Animation Resource: Uses TheEyeEntity (T)
     // The error "implement getAnimationResource(T)" requires this specific signature.

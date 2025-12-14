@@ -8,6 +8,6 @@ public class GodEyeClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		// Link the Entity Logic to the Visual Renderer
-		EntityRendererRegistry.register(ModEntities.THE_EYE, (context) -> new TheEyeRenderer(context));
+		EntityRendererRegistry.register(ModEntities.THE_EYE, (context) -> new TheEyeRenderer<>(context));
 	}
 }

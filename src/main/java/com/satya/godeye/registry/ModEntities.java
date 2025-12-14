@@ -21,10 +21,11 @@ public class ModEntities {
     // 2. Register the Entity using the Key
     public static final EntityType<TheEyeEntity> THE_EYE = Registry.register(
             Registries.ENTITY_TYPE,
-            THE_EYE_KEY,
+            Identifier.of(GodEyeMod.MOD_ID, "the_eye"),
             EntityType.Builder.create(TheEyeEntity::new, SpawnGroup.CREATURE)
-                    .dimensions(3.0f, 1.75f)
-                    .build(THE_EYE_KEY) // Must pass the key here in 1.21.2+
+                    // CHANGE THIS: Match your visual scale roughly (Width, Height)
+                    .dimensions(15.0f, 10.0f)
+                    .build(RegistryKey.of(Registries.ENTITY_TYPE.getKey(), Identifier.of(GodEyeMod.MOD_ID, "the_eye")))
     );
 
     public static void registerModEntities() {

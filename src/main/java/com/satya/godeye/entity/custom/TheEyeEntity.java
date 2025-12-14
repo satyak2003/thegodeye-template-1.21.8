@@ -110,7 +110,7 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<TheEyeEntity>(
                 "controller", 0,
-                state -> state.setAndContinue(RawAnimation.begin().thenLoop("pupil.rotate"))
+                state -> state.setAndContinue(RawAnimation.begin().thenLoop("pupil"))
         ));
     }
 
@@ -126,13 +126,21 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
     public void tick() {
         super.tick();
         if (this.getWorld().isClient) {
-            double x = this.getX() + (this.random.nextDouble() - 0.5) * 1.5;
-            double y = this.getY() + 1.0 + (this.random.nextDouble() - 0.5) * 1.5;
-            double z = this.getZ() + (this.random.nextDouble() - 0.5) * 1.5;
-            this.getWorld().addParticleClient(ParticleTypes.DRIPPING_OBSIDIAN_TEAR, x, y, z, 0.0, 0.0, 0.0);
+            // Spawn 5 particles per tick so it looks dense enough for a giant entity
+            for (int i = 0; i < 5; i++) {
+                // Scale multiplier: Increased from 1.5 to 4.5 (Matches the 4.0x body scale)
+                double x = this.getX() + (this.random.nextDouble() - 0.5) * 4.5;
+
+                // Height offset: Increased from +1.0 to +2.5 (Centers it on the giant body)
+                // Height spread: Increased to 4.5 so it covers the whole height
+                double y = this.getY() + 2.5 + (this.random.nextDouble() - 0.5) * 4.5;
+
+                double z = this.getZ() + (this.random.nextDouble() - 0.5) * 4.5;
+
+                this.getWorld().addParticleClient(ParticleTypes.DRIPPING_OBSIDIAN_TEAR, x, y, z, 0.0, 0.0, 0.0);
+            }
         }
     }
-
     // --- ACTOR & QUEST LOGIC ---
 
     public void setActor(UUID uuid) {
