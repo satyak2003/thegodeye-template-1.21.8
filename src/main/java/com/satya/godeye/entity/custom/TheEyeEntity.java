@@ -17,18 +17,15 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 
-// AI & NAVIGATION (Fixed Imports)
 import net.minecraft.entity.ai.control.FlightMoveControl;
 import net.minecraft.entity.ai.pathing.BirdNavigation;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 
-// SOUNDS & PARTICLES
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.particle.ParticleTypes;
 
-// LOOT IMPORTS
 import net.minecraft.loot.LootTable;
 import net.minecraft.loot.context.LootWorldContext;
 import net.minecraft.loot.context.LootContextParameters;
@@ -36,7 +33,6 @@ import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 
-// DATA IMPORTS
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.registry.Registries;
@@ -51,7 +47,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.Random;
 import java.util.Set;
+import java.util.HashSet; // Import HashSet
 import java.util.Collections;
+import java.util.stream.Collectors; // Import Collectors
 
 import net.minecraft.world.TeleportTarget;
 
@@ -66,7 +64,9 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private UUID actorUuid;
 
-    // QUEST VARIABLES
+    // NEW: Ignore List
+    private final Set<UUID> ignoredPlayers = new HashSet<>();
+
     public enum QuestType { NONE, KILL, FETCH }
     private QuestType currentQuest = QuestType.NONE;
     private UUID targetPlayerUuid;
@@ -79,39 +79,31 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
 
     public TheEyeEntity(EntityType<? extends MobEntity> entityType, World world) {
         super(entityType, world);
-        // NO GRAVITY & FLIGHT CONTROL
         this.setNoGravity(true);
         this.setInvulnerable(true);
         this.setPersistent();
         this.moveControl = new FlightMoveControl(this, 20, true);
     }
 
-    // --- NAVIGATION FIX ---
     @Override
     protected EntityNavigation createNavigation(World world) {
-        // BirdNavigation handles flying pathfinding
         BirdNavigation navigation = new BirdNavigation(this, world);
-
-        // Removed setCanPathThroughDoors/setCanEnterOpenDoors as BirdNavigation doesn't support them.
         navigation.setCanSwim(true);
-
         return navigation;
     }
 
-    // --- ATTRIBUTES ---
     public static DefaultAttributeContainer.Builder createEyeAttributes() {
         return MobEntity.createMobAttributes()
                 .add(EntityAttributes.MAX_HEALTH, 100.0)
                 .add(EntityAttributes.MOVEMENT_SPEED, 0.3)
                 .add(EntityAttributes.KNOCKBACK_RESISTANCE, 1.0)
                 .add(EntityAttributes.FLYING_SPEED, 0.6)
-                .add(EntityAttributes.GRAVITY, 0.0); // 0 Gravity for true flight
+                .add(EntityAttributes.GRAVITY, 0.0);
     }
 
-    // Prevent Fall Damage
     @Override
     public boolean handleFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource) {
-        return false; // Disables fall damage
+        return false;
     }
 
     @Override
@@ -125,7 +117,6 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() { return this.cache; }
 
-    // --- SOUNDS & PARTICLES ---
     @Override
     protected SoundEvent getAmbientSound() {
         return SoundEvents.ENTITY_PHANTOM_AMBIENT;
@@ -146,6 +137,7 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
 
     public void setActor(UUID uuid) {
         this.actorUuid = uuid;
+        this.ignoredPlayers.clear(); // Clear ignore list on new actor? (Optional)
         this.currentQuest = QuestType.NONE;
         this.targetPlayerUuid = null;
         this.targetPlayerName = "";
@@ -155,23 +147,29 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
 
     public UUID getActorUuid() { return this.actorUuid; }
 
+    // NEW: Method to Add Ignored Player
+    public boolean addIgnoredPlayer(UUID uuid) {
+        return this.ignoredPlayers.add(uuid);
+    }
+
+    // NEW: Check if ignored
+    public boolean isIgnored(UUID uuid) {
+        return this.ignoredPlayers.contains(uuid);
+    }
+
     @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         if (!this.getWorld().isClient && hand == Hand.MAIN_HAND) {
-
             long currentTime = this.getWorld().getTime();
             if (currentTime - this.lastInteractTime < 20) return ActionResult.SUCCESS;
             this.lastInteractTime = currentTime;
 
-            // PUNISHMENT (Stranger)
             if (this.actorUuid == null || !this.actorUuid.equals(player.getUuid())) {
                 player.sendMessage(Text.literal("§c[The God Eye]§r You are unworthy!"), true);
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 200, 0));
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 100, 1));
-
                 this.getWorld().playSound(null, this.getX(), this.getY(), this.getZ(),
                         SoundEvents.BLOCK_SCULK_SHRIEKER_SHRIEK, SoundCategory.HOSTILE, 2.0f, 1.0f);
-
                 if (this.getWorld() instanceof ServerWorld serverWorld) {
                     Vec3d dir = player.getPos().subtract(this.getPos()).normalize();
                     serverWorld.spawnParticles(ParticleTypes.SONIC_BOOM,
@@ -181,7 +179,6 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
                 return ActionResult.SUCCESS;
             }
 
-            // ACTOR LOGIC - Turn In
             if (this.currentQuest == QuestType.FETCH && !this.isQuestCompleted) {
                 if (player.getMainHandStack().getItem() == this.targetItem) {
                     completeQuest(player);
@@ -189,33 +186,28 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
                     return ActionResult.SUCCESS;
                 }
             }
+
             if (this.currentQuest == QuestType.KILL && this.isQuestCompleted) {
                 completeQuest(player);
                 return ActionResult.SUCCESS;
             }
 
-            // PUNISHMENT (Busy)
             if (this.currentQuest != QuestType.NONE) {
                 String taskDesc = (this.currentQuest == QuestType.KILL)
                         ? "Kill §c" + this.targetPlayerName
                         : "Bring §b" + this.targetItem.getName().getString();
 
                 player.sendMessage(Text.literal("§6[The God Eye]§r Finish your task first! (" + taskDesc + "§r)"), true);
-
                 Vec3d direction = player.getPos().subtract(this.getPos()).normalize();
                 player.setVelocity(direction.x * 3.0, 0.5, direction.z * 3.0);
-
                 if (player instanceof ServerPlayerEntity serverPlayer) {
                     serverPlayer.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(serverPlayer));
                     serverPlayer.velocityModified = true;
-                    player.damage((ServerWorld) this.getWorld(), this.getDamageSources().magic(), 10.0f);
                 }
-                // Damage (Updated 1.21 signature)
                 player.damage((ServerWorld) this.getWorld(), this.getDamageSources().magic(), 10.0f);
                 return ActionResult.SUCCESS;
             }
 
-            // NEW QUEST
             generateNewQuest(player);
             return ActionResult.SUCCESS;
         }
@@ -226,12 +218,15 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
         Random random = new Random();
         if (random.nextBoolean()) {
             List<ServerPlayerEntity> players = this.getServer().getPlayerManager().getPlayerList();
+
+            // UPDATED: Filter out Actor AND Ignored Players
             List<ServerPlayerEntity> targets = players.stream()
-                    .filter(p -> !p.getUuid().equals(this.actorUuid))
+                    .filter(p -> !p.getUuid().equals(this.actorUuid)) // Not the actor
+                    .filter(p -> !this.ignoredPlayers.contains(p.getUuid())) // Not ignored
                     .toList();
 
             if (targets.isEmpty()) {
-                player.sendMessage(Text.literal("§d[The God Eye]§r No one else is here to kill... I will wait."), false);
+                player.sendMessage(Text.literal("§d[The God Eye]§r No suitable targets found... I will wait."), false);
                 return;
             }
 
@@ -293,7 +288,6 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
 
     public boolean resurrectPlayer(ServerPlayerEntity target) {
         if (target == null) return false;
-
         target.changeGameMode(GameMode.SURVIVAL);
         target.setHealth(target.getMaxHealth());
         target.getHungerManager().setFoodLevel(20);
@@ -324,12 +318,11 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
         target.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 600, 1));
         target.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 1200, 0));
         target.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 0));
-
         target.sendMessage(Text.literal("§d[The God Eye]§r Death is not your end yet."), true);
         return true;
     }
 
-    // --- DATA SAVING ---
+    // --- DATA SAVING (Including Ignore List) ---
 
     @Override
     protected void writeCustomData(WriteView view) {
@@ -337,6 +330,15 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
         if (this.actorUuid != null) view.putString("ActorUuid", this.actorUuid.toString());
         view.putString("QuestType", this.currentQuest.name());
         view.putBoolean("QuestCompleted", this.isQuestCompleted);
+
+        // Save Ignored Players as a comma-separated string
+        if (!this.ignoredPlayers.isEmpty()) {
+            String ignoredStr = this.ignoredPlayers.stream()
+                    .map(UUID::toString)
+                    .collect(Collectors.joining(","));
+            view.putString("IgnoredPlayers", ignoredStr);
+        }
+
         if (this.currentQuest == QuestType.KILL) {
             if (this.targetPlayerUuid != null) view.putString("TargetUuid", this.targetPlayerUuid.toString());
             view.putString("TargetName", this.targetPlayerName);
@@ -347,25 +349,48 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
 
     @Override
     protected void readCustomData(ReadView view) {
-        super.readCustomData(view);
-        String uuidStr = view.getString("ActorUuid", "");
-        if (!uuidStr.isEmpty()) {
-            try { this.actorUuid = UUID.fromString(uuidStr); } catch (Exception e) {}
+        super.readCustomData(view); // Always call super
+
+        // 1. Load Actor UUID
+        // view.getString now requires a default value (empty string)
+        String actorStr = view.getString("ActorUuid", "");
+        if (!actorStr.isEmpty()) {
+            try {
+                this.actorUuid = UUID.fromString(actorStr);
+            } catch (Exception e) {
+                this.actorUuid = null;
+            }
         }
+
+        // 2. Load Quest Type
+        String questStr = view.getString("QuestType", "NONE");
         try {
-            this.currentQuest = QuestType.valueOf(view.getString("QuestType", "NONE"));
-        } catch (Exception e) { this.currentQuest = QuestType.NONE; }
+            this.currentQuest = QuestType.valueOf(questStr);
+        } catch (Exception e) {
+            this.currentQuest = QuestType.NONE;
+        }
+
+        // 3. Load Quest Completion Status
         this.isQuestCompleted = view.getBoolean("QuestCompleted", false);
-        if (this.currentQuest == QuestType.KILL) {
-            String targetStr = view.getString("TargetUuid", "");
-            if (!targetStr.isEmpty()) this.targetPlayerUuid = UUID.fromString(targetStr);
-            this.targetPlayerName = view.getString("TargetName", "");
-        } else if (this.currentQuest == QuestType.FETCH) {
-            String itemStr = view.getString("TargetItem", "minecraft:air");
-            this.targetItem = Registries.ITEM.get(Identifier.of(itemStr));
+
+        // 4. Load Ignored Players List
+        this.ignoredPlayers.clear();
+        String ignoredStr = view.getString("IgnoredPlayers", "");
+
+        if (!ignoredStr.isEmpty()) {
+            // Now 'ignoredStr' is definitely a String, so .split() works
+            String[] uuids = ignoredStr.split(",");
+            for (String uuidStr : uuids) {
+                try {
+                    if (!uuidStr.isBlank()) {
+                        this.ignoredPlayers.add(UUID.fromString(uuidStr.trim()));
+                    }
+                } catch (Exception e) {
+                    // Ignore malformed UUIDs
+                }
+            }
         }
     }
-
     @Override
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
         if (source.isSourceCreativePlayer() || source.getName().equals("outOfWorld")) return super.damage(world, source, amount);
