@@ -9,7 +9,7 @@ import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRe
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 
-import net.minecraft.util.ActionResult;
+import net.minecraft.util.TypedActionResult;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.entity.TntEntity;
@@ -65,10 +65,10 @@ public class GodEyeMod implements ModInitializer {
                     Vec3d targetPos = player.getPos();
                     spawnOrbitalStrike(serverWorld, targetPos);
                     player.sendMessage(Text.literal("§c[GodEye]§r ORBITAL STRIKE INITIATED."), true);
-                    return ActionResult.PASS;
+                    return TypedActionResult.pass(player.getStackInHand(hand));
                 }
             }
-            return ActionResult.PASS;
+            return TypedActionResult.pass(player.getStackInHand(hand));
         });
     }
 

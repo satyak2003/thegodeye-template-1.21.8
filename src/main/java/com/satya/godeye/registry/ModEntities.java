@@ -13,7 +13,7 @@ import net.minecraft.util.Identifier;
 public class ModEntities {
 
     // 1. Define the Identity Key
-    public static final RegistryKey<EntityType<?>> THE_EYE_KEY = RegistryKey.of(
+    public static final RegistryKey<EntityType<TheEyeEntity>> THE_EYE_KEY = RegistryKey.of(
             RegistryKeys.ENTITY_TYPE,
             Identifier.of(GodEyeMod.MOD_ID, "the_eye")
     );
@@ -25,7 +25,7 @@ public class ModEntities {
             EntityType.Builder.create(TheEyeEntity::new, SpawnGroup.CREATURE)
                     // CHANGE THIS: Match your visual scale roughly (Width, Height)
                     .dimensions(15.0f, 10.0f)
-                    .build(RegistryKey.of(Registries.ENTITY_TYPE.getKey(), Identifier.of(GodEyeMod.MOD_ID, "the_eye")))
+                    .build(THE_EYE_KEY)
     );
 
     public static void registerModEntities() {
