@@ -283,6 +283,10 @@ public class TheEyeEntity extends MobEntity implements GeoEntity {
     }
 
     public void onPlayerKilled(ServerPlayerEntity victim, Entity attacker) {
+        if (attacker == null || this.actorUuid == null || this.targetPlayerUuid == null) {
+            return;
+        }
+
         if (this.currentQuest == QuestType.KILL && !this.isQuestCompleted) {
             if (victim.getUuid().equals(this.targetPlayerUuid) && attacker.getUuid().equals(this.actorUuid)) {
                 this.isQuestCompleted = true;
