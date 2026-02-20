@@ -45,8 +45,8 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	// https://mvnrepository.com/artifact/software.bernie.geckolib/geckolib-fabric-1.21.6
-	modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.8:5.2.2"
+	// https://mvnrepository.com/artifact/software.bernie.geckolib/geckolib-fabric-1.21.11
+	modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.11:5.2.2"
 	
 }
 
